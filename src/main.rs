@@ -6,19 +6,21 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+const SSH_KEY_LOCATION: &str = "../id_rsa";
+
 fn configure_auth_callbacks(callbacks: &mut RemoteCallbacks) {
     // Prepare callbacks.
     callbacks.credentials(|_url, username_from_url, _allowed_types| {
         Cred::ssh_key(
             username_from_url.expect("Can't get username from URL"),
             None,
-            std::path::Path::new("../id_rsa"),
+            std::path::Path::new(SSH_KEY_LOCATION),
             None,
         )
     });
 }
 
-fn clone_repo(repo_path: &Path) -> Result<Repository, Error> {
+fn clone_repo(repo_path: &Path, repo_url: &str) -> Result<Repository, Error> {
     std::fs::remove_dir_all(repo_path).expect("Can't remove target dir");
 
     let mut callbacks = RemoteCallbacks::new();
@@ -30,7 +32,7 @@ fn clone_repo(repo_path: &Path) -> Result<Repository, Error> {
     let mut builder = git2::build::RepoBuilder::new();
     builder.fetch_options(fetch_opts);
 
-    builder.clone("git@github.com:zezic/robogit-patient.git", repo_path)
+    builder.clone(repo_url, repo_path)
 }
 
 fn modify_file_and_stage(repo_path: &Path, repo: &Repository) -> Result<(), Error> {
@@ -96,7 +98,8 @@ fn push(repo: &Repository) -> Result<(), Error> {
 
 fn main() -> Result<(), Error> {
     let repo_path = Path::new("/tmp/robogit-patient");
-    let repository = clone_repo(repo_path)?;
+    let repo_url = "git@github.com:zezic/robogit-patient.git";
+    let repository = clone_repo(repo_path, repo_url)?;
     modify_file_and_stage(repo_path, &repository)?;
     commit(&repository)?;
     push(&repository)?;
