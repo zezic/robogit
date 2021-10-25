@@ -1,5 +1,10 @@
-use std::{fs::OpenOptions, io::Write, path::Path, time::{SystemTime, UNIX_EPOCH}};
 use git2::{Cred, Direction, Error, PushOptions, RemoteCallbacks, Repository, Signature};
+use std::{
+    fs::OpenOptions,
+    io::Write,
+    path::Path,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 fn configure_auth_callbacks(callbacks: &mut RemoteCallbacks) {
     // Prepare callbacks.
@@ -25,23 +30,21 @@ fn clone_repo(repo_path: &Path) -> Result<Repository, Error> {
     let mut builder = git2::build::RepoBuilder::new();
     builder.fetch_options(fetch_opts);
 
-    builder.clone(
-        "git@github.com:zezic/robogit-patient.git",
-        repo_path,
-    )
+    builder.clone("git@github.com:zezic/robogit-patient.git", repo_path)
 }
 
 fn modify_file_and_stage(repo_path: &Path, repo: &Repository) -> Result<(), Error> {
     let file_path = Path::new("README.md");
 
     let now = SystemTime::now();
-    let time = now.duration_since(UNIX_EPOCH).expect("Can't get time");
+    let time = now.duration_since(UNIX_EPOCH).expect("Can't make time");
 
     let full_path = repo_path.join(file_path);
     let mut file = OpenOptions::new()
-            .append(true)
-            .open(full_path)
-            .expect("Unable to open file");
+        .append(true)
+        .open(full_path)
+        .expect("Unable to open file");
+
     let msg = format!("* Line added at {}\n", time.as_secs());
     file.write_all(msg.as_bytes()).expect("Can't write to file");
 
@@ -58,17 +61,21 @@ fn commit(repo: &Repository) -> Result<(), Error> {
     let parent_commit = repo.head().unwrap().peel_to_commit().unwrap();
     let tree = repo.find_tree(oid)?;
     let message = "Updated README.md";
-    repo.commit(Some("HEAD"), //  point HEAD to our new commit
-                &signature, // author
-                &signature, // committer
-                message, // commit message
-                &tree, // tree
-                &[&parent_commit])?; // parents
+    repo.commit(
+        Some("HEAD"), // point HEAD to our new commit
+        &signature,
+        &signature,
+        message,
+        &tree,
+        &[&parent_commit],
+    )?;
     Ok(())
 }
 
 fn push(repo: &Repository) -> Result<(), Error> {
-    let mut remote = repo.find_remote("origin").expect("Can't find the 'origin' remote");
+    let mut remote = repo
+        .find_remote("origin")
+        .expect("Can't find the 'origin' remote");
 
     let mut callbacks = RemoteCallbacks::new();
     configure_auth_callbacks(&mut callbacks);
@@ -81,10 +88,13 @@ fn push(repo: &Repository) -> Result<(), Error> {
     let mut push_options = PushOptions::new();
     push_options.remote_callbacks(callbacks);
 
-    remote.push(&["refs/heads/master:refs/heads/master"], Some(&mut push_options))
+    remote.push(
+        &["refs/heads/master:refs/heads/master"],
+        Some(&mut push_options),
+    )
 }
 
-fn main() -> Result<(), Error>{
+fn main() -> Result<(), Error> {
     let repo_path = Path::new("/tmp/robogit-patient");
     let repository = clone_repo(repo_path)?;
     modify_file_and_stage(repo_path, &repository)?;
